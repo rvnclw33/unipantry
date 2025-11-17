@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "842026507618",
+    "project_id": "unipantry-b018d",
+    "storage_bucket": "unipantry-b018d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:842026507618:android:a03186e7b9d209856da03b",
+        "android_client_info": {
+          "package_name": "com.example.unipantry"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIXSlL6xq3g-eMKusD9_xKVZ3WKzPEtrc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
