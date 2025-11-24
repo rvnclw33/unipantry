@@ -13,12 +13,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   
-  // State
-  bool _isLogin = true; // Toggle between Login and Signup
+  bool _isLogin = true; 
   bool _isLoading = false;
 
   @override
@@ -32,7 +30,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    FocusScope.of(context).unfocus(); // Close keyboard
+    FocusScope.of(context).unfocus();
 
     final auth = ref.read(authServiceProvider);
     final email = _emailController.text.trim();
@@ -44,7 +42,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else {
         await auth.signUpWithEmail(email, password);
       }
-      // If successful, the AuthState stream in App.dart will handle navigation
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -67,23 +64,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        // Background color acts as fallback while image loads
         backgroundColor: theme.colorScheme.primary,
         body: Stack(
           children: [
             // --- 1. BACKGROUND IMAGE ---
             Positioned.fill(
               child: Image.asset(
-                'assets/login_bg.png', // <--- YOUR IMAGE HERE
+                'assets/images/login_bg.png', 
                 fit: BoxFit.cover,
               ),
             ),
 
             // --- 2. DARK OVERLAY ---
-            // This ensures text is readable even if the image is bright
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.5), // Adjust opacity (0.0 to 1.0)
+                color: Colors.black.withOpacity(0.5),
               ),
             ),
 
@@ -94,7 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // --- Logo Section ---
+                    // Logo
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -137,12 +132,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // --- The Card ---
+                    // --- LOGIN CARD ---
                     Card(
                       elevation: 8,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                      // Ensure card stands out against image
-                      color: theme.colorScheme.surface.withOpacity(0.95),
+                      // Glassy White Background
+                      color: Colors.white.withOpacity(0.9), 
                       child: Padding(
                         padding: const EdgeInsets.all(24.0),
                         child: Form(
@@ -154,16 +149,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   _buildToggleText('Log In', true),
-                                  Container(width: 1, height: 20, color: Colors.grey[300], margin: const EdgeInsets.symmetric(horizontal: 16)),
+                                  Container(width: 1, height: 20, color: Colors.grey[400], margin: const EdgeInsets.symmetric(horizontal: 16)),
                                   _buildToggleText('Sign Up', false),
                                 ],
                               ),
                               const SizedBox(height: 24),
 
-                              // Email Field
+                              // --- EMAIL FIELD ---
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
+                                style: const TextStyle(color: Colors.black), 
+                                cursorColor: theme.colorScheme.primary,
                                 decoration: _inputDecoration('Email', PhosphorIconsDuotone.envelope),
                                 validator: (value) {
                                   if (value == null || !value.contains('@')) return 'Invalid email';
@@ -172,25 +169,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               const SizedBox(height: 16),
 
-                              // Password Field
+                              // --- PASSWORD FIELD ---
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: true,
+                                style: const TextStyle(color: Colors.black),
+                                cursorColor: theme.colorScheme.primary,
                                 decoration: _inputDecoration('Password', PhosphorIconsDuotone.lockKey),
                                 validator: (value) {
-                                  if (value == null || value.length < 6) return 'Password too short (min 6)';
+                                  if (value == null || value.length < 6) return 'Min 6 characters';
                                   return null;
                                 },
                               ),
                               const SizedBox(height: 24),
 
-                              // Action Button
+                              // --- ORANGE ACTION BUTTON ---
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
                                 child: FilledButton(
                                   onPressed: _isLoading ? null : _submit,
                                   style: FilledButton.styleFrom(
+                                    // CHANGED: Set background to Orange
+                                    backgroundColor: Colors.orange, 
+                                    foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                   child: _isLoading
@@ -220,9 +222,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // Helper for Toggle Text
   Widget _buildToggleText(String title, bool isLoginState) {
     final isActive = _isLogin == isLoginState;
+    
     return InkWell(
       onTap: () => setState(() => _isLogin = isLoginState),
       child: Padding(
@@ -232,29 +234,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
+            // CHANGED: Active color is now darker (Black87), Inactive is Grey
             color: isActive 
-                ? Theme.of(context).colorScheme.primary 
-                : Colors.grey[400],
+                ? Colors.black87 
+                : Colors.grey[500],
           ),
         ),
       ),
     );
   }
 
-  // Helper for Input Styling
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon),
+      labelStyle: TextStyle(color: Colors.grey[700]), 
+      prefixIcon: Icon(icon, color: Colors.grey[600]),
       filled: true,
-      fillColor: Colors.grey[50],
+      fillColor: Colors.white, 
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[200]!),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.orange, width: 2), // Highlight border also Orange to match
       ),
     );
   }
