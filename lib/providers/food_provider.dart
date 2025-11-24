@@ -1,9 +1,8 @@
-// lib/providers/food_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:unipantry/models/food_item.dart';
 import 'package:unipantry/providers/auth_provider.dart';
-import 'package:unipantry/screens/home_screen.dart'; // For the filter
+import 'package:unipantry/screens/home_screen.dart'; // For FoodFilter enum
 
 // 1. A provider for the Firestore instance
 final firestoreProvider =
@@ -20,17 +19,15 @@ final foodServiceProvider = Provider<FirestoreService>((ref) {
 });
 
 // 3. A STREAM PROVIDER to get the list of food items
-// This is what the HomeScreen watches. It automatically updates!
 final foodItemsStreamProvider =
     StreamProvider.family<List<FoodItem>, FoodFilter>((ref, filter) {
   final householdId = ref.watch(householdIdProvider);
 
   if (householdId == null) {
-    // This is a failsafe. We must have a householdId
+    // Failsafe: Try to recover householdId if it's missing but user is logged in
     final authState = ref.watch(authStateProvider);
     final user = authState.asData?.value;
     if (user != null) {
-      // Fetch the user doc to find the householdId
       final userDoc = ref
           .watch(firestoreProvider)
           .collection('users')
@@ -38,20 +35,17 @@ final foodItemsStreamProvider =
           .get();
       userDoc.then((doc) {
         if (doc.exists) {
-          // Update the StateProvider, which will trigger this to re-run
-          ref.read(householdIdProvider.notifier).state = doc.data()?['householdId'];
+          ref.read(householdIdProvider.notifier).setHouseholdId(doc.data()?['householdId']);
         }
       });
     }
-    // Return an empty stream while we figure this out
     return Stream.value([]);
   }
 
-  // We have a householdId, so return the real stream
   return ref.watch(foodServiceProvider).getFoodItemsStream(filter);
 });
 
-// This is the class that does the work
+// This is the class that does the heavy lifting
 class FirestoreService {
   final FirebaseFirestore firestore;
   final String? householdId;
@@ -62,36 +56,50 @@ class FirestoreService {
   CollectionReference get _itemsCollection =>
       firestore.collection('households').doc(householdId).collection('items');
 
-  // Add a new food item
+  // --- CREATE ---
   Future<void> addFoodItem(FoodItem item) async {
     if (householdId == null) return;
     await _itemsCollection.add(item.toJson());
   }
 
-  // Get a stream of food items based on the filter
+  // --- UPDATE (New) ---
+  Future<void> updateFoodItem(FoodItem item) async {
+    if (householdId == null) return;
+    await _itemsCollection.doc(item.id).update(item.toJson());
+  }
+
+  // --- DELETE (New) ---
+  Future<void> deleteFoodItem(String itemId) async {
+    if (householdId == null) return;
+    await _itemsCollection.doc(itemId).delete();
+  }
+
+  // --- READ / STREAM ---
   Stream<List<FoodItem>> getFoodItemsStream(FoodFilter filter) {
     if (householdId == null) return Stream.value([]);
 
     Query query = _itemsCollection;
     final now = DateTime.now();
+    // Normalize "now" to midnight for accurate day comparison
+    final today = DateTime(now.year, now.month, now.day);
 
-    // This is the "NoWaste" filter logic
     switch (filter) {
       case FoodFilter.expiringSoon:
-        final threeDaysFromNow = now.add(const Duration(days: 3));
+        // Items expiring between today and 3 days from now
+        final threeDaysFromNow = today.add(const Duration(days: 3));
         query = query
-            .where('expiryDate', isGreaterThanOrEqualTo: now)
+            .where('expiryDate', isGreaterThanOrEqualTo: today)
             .where('expiryDate', isLessThanOrEqualTo: threeDaysFromNow)
             .orderBy('expiryDate');
         break;
       case FoodFilter.expired:
+        // Items strictly before today
         query = query
-            .where('expiryDate', isLessThan: now)
+            .where('expiryDate', isLessThan: today)
             .orderBy('expiryDate');
         break;
       case FoodFilter.all:
-      // ignore: unreachable_switch_default
-      default:
+        // All items, ordered by expiry date
         query = query.orderBy('expiryDate');
         break;
     }

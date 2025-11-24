@@ -1,7 +1,7 @@
-// lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unipantry/providers/auth_provider.dart';
+import 'package:unipantry/providers/theme_provider.dart'; // Import the new provider
 import 'package:unipantry/screens/bottom_nav_screen.dart';
 import 'package:unipantry/screens/login_screen.dart';
 
@@ -10,26 +10,45 @@ class App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the authentication state
     final authState = ref.watch(authStateProvider);
+    // 1. Watch the theme mode
+    final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
       title: 'PantryPal',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
       debugShowCheckedModeBanner: false,
+      
+      // 2. Connect the Mode
+      themeMode: themeMode,
+
+      // 3. Define Light Theme
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal, 
+          brightness: Brightness.light
+        ),
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF8F9FA), // Soft white
+      ),
+
+      // 4. Define Dark Theme
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal, 
+          brightness: Brightness.dark // <--- This does the magic
+        ),
+        useMaterial3: true,
+        // Optional: Customize dark background if you don't like pure black
+        scaffoldBackgroundColor: const Color(0xFF121212), 
+      ),
+
       home: authState.when(
         data: (user) {
-          // If user is logged in, show the main app
           if (user != null) {
             return const BottomNavScreen();
           }
-          // Otherwise, show the login screen
           return const LoginScreen();
         },
-        // Show loading/error screens while checking auth
         loading: () => const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),

@@ -1,88 +1,82 @@
-// lib/services/notification_service.dart
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
-  // Singleton pattern to ensure only one instance
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  final fln.FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+      fln.FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    // Android initialization settings
-    // 'app_icon' must exist in android/app/src/main/res/drawable
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('app_icon');
+    // 1. Initialize Timezones
+    tz.initializeTimeZones();
 
-    // --- THIS IS THE CORRECTED PART ---
-    // We must explicitly tell iOS to show alerts, play sounds,
-    // and update the badge *while the app is in the foreground*.
-    const DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
-      
-      // 1. This requests permission from the user
+    // 2. Android
+    const fln.AndroidInitializationSettings initializationSettingsAndroid =
+        fln.AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    // 3. iOS
+    const fln.DarwinInitializationSettings initializationSettingsIOS =
+        fln.DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
-      
-      // 2. THIS IS THE CRITICAL FIX
-      // These force the notification to appear even if the app is open
-      defaultPresentAlert: true,
-      defaultPresentBadge: true,
-      defaultPresentSound: true,
     );
 
-    const InitializationSettings initializationSettings =
-        InitializationSettings(
+    const fln.InitializationSettings initializationSettings = fln.InitializationSettings(
       android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS, // Use the new, corrected settings
+      iOS: initializationSettingsIOS,
     );
 
-    // This initializes the plugin with our settings
     await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  // Function to show a simple notification
+  // --- IMMEDIATE NOTIFICATION ---
   Future<void> showNotification({
     required String title,
     required String body,
-    int id = 0, // ID for the notification
+    int id = 0,
   }) async {
-    
-    // 1. Android Details
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'pantry_channel_id', // Channel ID
-      'Pantry Notifications', // Channel Name
-      channelDescription: 'Notifications about food items',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: false,
-    );
-
-    // 2. iOS Details
-    const DarwinNotificationDetails darwinPlatformChannelSpecifics =
-        DarwinNotificationDetails(
-      presentAlert: true,  // Required to show a visual alert
-      presentBadge: true,  // Required to update the app badge
-      presentSound: true,  // Required to play a sound
-    );
-
-    // 3. Combine both platforms
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-      iOS: darwinPlatformChannelSpecifics, // Include the iOS settings
-    );
-
-    // 4. Show the notification
     await _flutterLocalNotificationsPlugin.show(
       id,
       title,
       body,
-      platformChannelSpecifics,
+      _notificationDetails(),
+    );
+  }
+
+  // --- SCHEDULED NOTIFICATION ---
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    if (scheduledDate.isBefore(DateTime.now())) return;
+
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      _notificationDetails(),
+      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  fln.NotificationDetails _notificationDetails() {
+    return const fln.NotificationDetails(
+      android: fln.AndroidNotificationDetails(
+        'pantry_channel_id',
+        'Pantry Notifications',
+        channelDescription: 'Notifications for food expiry',
+        importance: fln.Importance.max,
+        priority: fln.Priority.high,
+      ),
+      iOS: fln.DarwinNotificationDetails(),
     );
   }
 }

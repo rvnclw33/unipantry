@@ -1,4 +1,3 @@
-// lib/screens/scan_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:unipantry/screens/manual_entry_screen.dart';
@@ -15,21 +14,30 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   bool _isProcessing = false;
 
-  // This function calls the OpenFoodFacts API
-  Future<String?> _fetchProductName(String barcode) async {
+  // UPDATED: Return a Map instead of just a String
+  Future<Map<String, dynamic>?> _fetchProductDetails(String barcode) async {
+    // We request specific fields: name, brands, quantity, and generic_name (description)
     final uri = Uri.parse(
-        'https://world.openfoodfacts.org/api/v0/product/$barcode.json?fields=product_name');
+        'https://world.openfoodfacts.org/api/v0/product/$barcode.json?fields=product_name,brands,quantity,generic_name');
+    
     try {
       final response = await http.get(uri);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        
         if (data['status'] == 1) {
-          return data['product']['product_name'];
+          final product = data['product'];
+          
+          return {
+            'name': product['product_name'] as String?,
+            'brand': product['brands'] as String?,
+            'description': product['generic_name'] as String?, // Often holds the description
+            'quantity': product['quantity'] as String?, // e.g. "500g"
+          };
         }
       }
     } catch (e) {
-      // Handle error (e.g., no internet)
-      print(e);
+      print("Error fetching product: $e");
     }
     return null;
   }
@@ -41,7 +49,6 @@ class _ScanScreenState extends State<ScanScreen> {
       body: Stack(
         children: [
           MobileScanner(
-            // This function is called when a barcode is detected
             onDetect: (capture) async {
               if (_isProcessing) return;
 
@@ -50,38 +57,35 @@ class _ScanScreenState extends State<ScanScreen> {
               });
 
               final barcode = capture.barcodes.first.rawValue;
-              if (barcode == null) return;
+              if (barcode == null) {
+                setState(() => _isProcessing = false);
+                return;
+              }
 
-              // 1. Fetch the product name from the API
-              final productName = await _fetchProductName(barcode);
+              // 1. Fetch all details
+              final productData = await _fetchProductDetails(barcode);
 
-              // 2. Navigate to the ManualEntryScreen, pre-filling the name
               if (mounted) {
-                Navigator.pop(context); // Pop the scanner
+                Navigator.pop(context); // Close scanner
+                
+                // 2. Navigate to Entry Screen with ALL data
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => ManualEntryScreen(
-                      scannedItemName: productName,
+                      scannedItemName: productData?['name'],
+                      scannedBrand: productData?['brand'],
+                      scannedBarcode: barcode,
+                      // We combine quantity and description for the notes field if available
+                      scannedDescription: _formatDescription(productData), 
                     ),
                   ),
                 );
               }
             },
           ),
-          // A simple overlay
-          Center(
-            child: Container(
-              width: 250,
-              height: 150,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.red, width: 2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          // Loading indicator
-          if (_isProcessing)
+          
+           if (_isProcessing)
             const Center(
               child: Card(
                 color: Colors.black54,
@@ -90,9 +94,9 @@ class _ScanScreenState extends State<ScanScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(),
+                      CircularProgressIndicator(color: Colors.white),
                       SizedBox(height: 16),
-                      Text('Fetching product...',
+                      Text('Fetching product details...',
                           style: TextStyle(color: Colors.white)),
                     ],
                   ),
@@ -102,5 +106,19 @@ class _ScanScreenState extends State<ScanScreen> {
         ],
       ),
     );
+  }
+
+  // Helper to combine generic name and quantity into a useful description
+  String? _formatDescription(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    
+    final desc = data['description'];
+    final qty = data['quantity'];
+
+    if (desc != null && qty != null) return '$desc ($qty)';
+    if (desc != null) return desc;
+    if (qty != null) return 'Size: $qty';
+    
+    return null;
   }
 }
