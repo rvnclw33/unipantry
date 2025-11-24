@@ -1,5 +1,3 @@
-// grocery screen
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -110,7 +108,8 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
               return const SizedBox.shrink();
             },
             loading: () => const SizedBox.shrink(),
-            error: (, _) => const SizedBox.shrink(),
+            // Fixed Error Syntax Here:
+            error: (err, stack) => const SizedBox.shrink(),
           ),
         ],
       ),
@@ -129,15 +128,14 @@ class _GroceryScreenState extends ConsumerState<GroceryScreen> {
                 _addItem(selection);
               },
 
-              // THE FIX IS HERE:
               fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                // 1. Capture the values provided by Autocomplete
+                // Capture values
                 _autocompleteController = controller;
                 _autocompleteFocusNode = focusNode; 
                 
                 return TextField(
                   controller: controller,
-                  focusNode: focusNode, // 2. MUST use this specific focusNode
+                  focusNode: focusNode,
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
                     hintText: 'Add item (e.g. Apple)',
