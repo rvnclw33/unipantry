@@ -1,39 +1,36 @@
 # Unipantry
 
-Unipantry is a cross-platform Flutter application designed to help households track pantry items, manage grocery lists, and monitor product expiry dates.  
-The system integrates barcode scanning, manual item entry, household collaboration, and scheduled notifications through Firebase and a custom notification service.
-
-The app aims to reduce food waste, streamline grocery planning, and provide a shared pantry for multiple household members.
+Unipantry is a cross-platform Flutter application designed to support household-level food inventory management, grocery list organization, and expiry tracking. The system integrates barcode scanning, manual item entry, household collaboration, and scheduled notifications using Firebase and a custom notification service. The goal of the application is to provide a unified, synchronized, and efficient approach to pantry management while reducing food waste.
 
 ---
 
 ## Overview
 
-Unipantry provides:
-- A shared pantry inventory for household members  
-- Grocery list creation and management  
-- Barcode scanning (OpenFoodAPI) and manual entry  
-- Automatic expiry reminders via scheduled notifications  
-- Firebase authentication, Firestore syncing, and real-time updates  
+Unipantry provides the following capabilities:
 
-The project follows a modular, provider-based architecture that separates UI, state management, models, and services.
+- Shared pantry inventory accessible by all members of a household  
+- Creation and management of grocery lists  
+- Barcode-based item retrieval through OpenFoodAPI  
+- Manual item entry with validation  
+- Automatic scheduling of expiry reminders  
+- Real-time synchronization via Firebase Firestore  
+- User authentication and household membership management through Firebase Authentication  
+
+The project follows a modular software architecture that separates UI components, state management, business logic, and data access layers.
 
 ---
 
 ## Architectural Notes
 
-- State Management: Riverpod providers  
-- Database: Firebase Firestore
-- Auth: Firebase Authentication  
-- Notifications: Local scheduled reminders for expiry dates  
-- API Integration: OpenFoodAPI for barcode lookups  
-- UI: Multi-screen Flutter application with reusable widgets  
+- **State Management:** Implemented using Riverpod to ensure predictable state flow and separation of concerns.  
+- **Data Persistence:** Firebase Firestore is used for real-time data synchronization across all household members.  
+- **Authentication:** Firebase Authentication manages user identity and access control.  
+- **Notification Scheduling:** A custom notification service schedules and dispatches expiry reminders locally.  
+- **API Integration:** OpenFoodAPI is utilized for barcode-based item metadata retrieval.  
+- **UI Layer:** Structured as a multi-screen Flutter application with reusable components, maintaining clear separation between UI and business logic.
 
-The architecture separates:
-- UI layer (Screens & Widgets)  
-- Logic layer (Providers)  
-- Data/Services layer
+The system architecture is organized into three major layers:
 
----
-
-
+1. **Presentation Layer** – Flutter screens and widgets  
+2. **Logic/State Layer** – Riverpod providers handling domain logic  
+3. **Data/Service Layer** – Firestore, Authentication, NotificationService, and external API integrations
