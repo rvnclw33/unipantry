@@ -36,6 +36,4 @@ The architecture separates:
 
 ---
 
-## 📌 Status
 
-Actively developed — more screens and improvements will be added.
