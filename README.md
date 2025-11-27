@@ -1,16 +1,41 @@
-# unipantry
+# 📦 Unipantry
 
-A new Flutter project.
+Unipantry is a cross-platform Flutter application designed to help households track pantry items, manage grocery lists, and monitor product expiry dates.  
+The system integrates barcode scanning, manual item entry, household collaboration, and scheduled notifications through Firebase and a custom notification service.
 
-## Getting Started
+The app aims to reduce food waste, streamline grocery planning, and provide a shared pantry for multiple household members.
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## 🧭 Overview
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Unipantry provides:
+- A shared pantry inventory for household members  
+- Grocery list creation and management  
+- Barcode scanning (OpenFoodAPI) and manual entry  
+- Automatic expiry reminders via scheduled notifications  
+- Firebase authentication, Firestore syncing, and real-time updates  
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The project follows a modular, provider-based architecture that separates UI, state management, models, and services.
+
+---
+
+## 🏛 Architectural Notes
+
+- **State Management:** Riverpod providers  
+- **Database:** Firebase Firestore (real-time sync)  
+- **Auth:** Firebase Authentication  
+- **Notifications:** Local scheduled reminders for expiry dates  
+- **API Integration:** OpenFoodAPI for barcode lookups  
+- **UI:** Multi-screen Flutter application with reusable widgets  
+
+The architecture separates:
+- UI layer (Screens & Widgets)  
+- Logic layer (Providers)  
+- Data/Services layer (Firestore, NotificationService, APIs)
+
+---
+
+## 📌 Status
+
+Actively developed — more screens and improvements will be added.
