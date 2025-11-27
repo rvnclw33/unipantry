@@ -1,4 +1,4 @@
-# 📦 Unipantry
+# Unipantry
 
 Unipantry is a cross-platform Flutter application designed to help households track pantry items, manage grocery lists, and monitor product expiry dates.  
 The system integrates barcode scanning, manual item entry, household collaboration, and scheduled notifications through Firebase and a custom notification service.
@@ -7,7 +7,7 @@ The app aims to reduce food waste, streamline grocery planning, and provide a sh
 
 ---
 
-## 🧭 Overview
+## Overview
 
 Unipantry provides:
 - A shared pantry inventory for household members  
@@ -20,19 +20,19 @@ The project follows a modular, provider-based architecture that separates UI, st
 
 ---
 
-## 🏛 Architectural Notes
+## Architectural Notes
 
-- **State Management:** Riverpod providers  
-- **Database:** Firebase Firestore (real-time sync)  
-- **Auth:** Firebase Authentication  
-- **Notifications:** Local scheduled reminders for expiry dates  
-- **API Integration:** OpenFoodAPI for barcode lookups  
-- **UI:** Multi-screen Flutter application with reusable widgets  
+- State Management: Riverpod providers  
+- Database: Firebase Firestore
+- Auth: Firebase Authentication  
+- Notifications: Local scheduled reminders for expiry dates  
+- API Integration: OpenFoodAPI for barcode lookups  
+- UI: Multi-screen Flutter application with reusable widgets  
 
 The architecture separates:
 - UI layer (Screens & Widgets)  
 - Logic layer (Providers)  
-- Data/Services layer (Firestore, NotificationService, APIs)
+- Data/Services layer
 
 ---
 
