@@ -2,8 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:unipantry/models/food_item.dart';
 import 'package:unipantry/providers/auth_provider.dart';
-import 'package:unipantry/screens/home_screen.dart'; // For FoodFilter enum
 
+// enum for filtering food items
+enum FoodFilter { all, expiringSoon, expired }
 // 1. A provider for the Firestore instance
 final firestoreProvider =
     Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
@@ -109,5 +110,33 @@ class FirestoreService {
         return FoodItem.fromJson(doc.data() as Map<String, dynamic>, doc.id);
       }).toList();
     });
+  }
+
+  // --- Log Waste Function ---
+  Future<void> logWastedItem(FoodItem item) async {
+    if (householdId == null) return;
+
+    final batch = firestore.batch();
+
+    // 1. Create a reference in the 'waste_logs' subcollection
+    final wasteRef = firestore
+        .collection('households')
+        .doc(householdId)
+        .collection('waste_logs')
+        .doc(); // Auto-ID
+
+    // 2. Add metadata about when it was wasted
+    final wasteData = item.toJson();
+    wasteData['wastedAt'] = Timestamp.now();
+    
+    // 3. Add to batch: Create log entry
+    batch.set(wasteRef, wasteData);
+
+    // 4. Add to batch: Delete original item
+    final itemRef = _itemsCollection.doc(item.id);
+    batch.delete(itemRef);
+
+    // 5. Commit both
+    await batch.commit();
   }
 }

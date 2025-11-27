@@ -233,7 +233,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 // Text color: Dimmed, but visible on both backgrounds
                 style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)), 
                 decoration: _modernInput('Email Address', PhosphorIconsDuotone.envelopeSimple, context).copyWith(
-                  // FIX: Dynamic background color based on theme
                   fillColor: isDark ? Colors.black26 : Colors.grey.shade200,
                 ),
               ),

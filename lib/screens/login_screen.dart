@@ -234,7 +234,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            // CHANGED: Active color is now darker (Black87), Inactive is Grey
             color: isActive 
                 ? Colors.black87 
                 : Colors.grey[500],
@@ -261,7 +260,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.orange, width: 2), // Highlight border also Orange to match
+        borderSide: BorderSide(color: Colors.orange, width: 2),
       ),
     );
   }

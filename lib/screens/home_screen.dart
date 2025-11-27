@@ -2,22 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:unipantry/providers/food_provider.dart';
-import 'package:unipantry/widgets/app_drawer.dart'; // Ensure you created this file
+import 'package:unipantry/widgets/app_drawer.dart';
 import 'package:unipantry/widgets/food_card.dart';
 
-// Your existing filter enum
-enum FoodFilter { all, expiringSoon, expired }
+// --- ENUMS ---
+// Make sure this DeleteAction enum includes 'mistake'
+enum DeleteAction { cancel, consumed, wasted, mistake }
 
 const List<String> _categories = [
-  'All',
-  'Fruit',
-  'Vegetable',
-  'Meat',
-  'Dairy',
-  'Bakery',
-  'Pantry',
-  'Drinks',
-  'Other'
+  'All', 'Fruit', 'Vegetable', 'Meat', 'Dairy', 
+  'Bakery', 'Pantry', 'Drinks', 'Other'
 ];
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -31,24 +25,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   FoodFilter _currentFoodFilter = FoodFilter.all;
   String _selectedCategory = 'All';
 
-  // --- Helper to show delete confirmation ---
-  Future<bool?> _showDeleteConfirmation(BuildContext context) {
-    return showDialog<bool>(
+  // --- NEW: Smart Delete Dialog ---
+  Future<DeleteAction?> _showDeleteActionDialog(BuildContext context, String itemName) {
+    return showDialog<DeleteAction>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Item?'),
-        content: const Text('Are you sure you want to remove this item from your pantry?'),
+        title: Text('Remove $itemName?'),
+        content: const Text('Why are you removing this item?'),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsOverflowButtonSpacing: 8,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false), // No
-            child: const Text('Cancel'),
+          // 1. The Tracking Options
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildDialogOption(
+                ctx, 
+                label: 'Consumed', 
+                icon: PhosphorIconsDuotone.check, 
+                color: Colors.green, 
+                action: DeleteAction.consumed
+              ),
+              _buildDialogOption(
+                ctx, 
+                label: 'Wasted', 
+                icon: PhosphorIconsDuotone.trash, 
+                color: Colors.red, 
+                action: DeleteAction.wasted
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
+          const Divider(),
+          
+          // 2. The "Oops" Option (Mistake)
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true), // Yes
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            onPressed: () => Navigator.pop(ctx, DeleteAction.mistake),
+            child: const Text("Just remove (Mistake entry)", style: TextStyle(color: Colors.grey)),
+          ),
+          
+          // 3. Cancel
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, DeleteAction.cancel),
+            child: const Text("Cancel"),
           ),
         ],
+      ),
+    );
+  }
+
+  // Helper for big dialog buttons
+  Widget _buildDialogOption(BuildContext context, {required String label, required IconData icon, required Color color, required DeleteAction action}) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, action),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
@@ -60,21 +105,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      // --- 1. ADD THE DRAWER ---
       drawer: const AppDrawer(),
-      
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 10),
             
-            // --- 2. HEADER WITH HAMBURGER BUTTON ---
+            // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 children: [
-                  // Use Builder to get the correct context to open drawer
                   Builder(
                     builder: (context) => IconButton(
                       icon: Icon(PhosphorIconsDuotone.list, size: 28),
@@ -97,11 +139,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // --- 3. SEGMENTED EXPIRY FILTER ---
+            // Expiry Filter
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Container(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(16),
@@ -118,7 +160,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             
             const SizedBox(height: 16),
 
-            // --- 4. CATEGORY HORIZONTAL LIST ---
+            // Category Filter
             SizedBox(
               height: 40,
               child: ListView.builder(
@@ -161,11 +203,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             
             const SizedBox(height: 16),
 
-            // --- 5. FOOD ITEM LIST WITH SWIPE-TO-DELETE ---
+            // --- LIST WITH DISMISSIBLE ---
             Expanded(
               child: foodItemsAsync.when(
                 data: (items) {
-                  // Client-side category filtering
                   final filteredList = items.where((item) {
                     if (_selectedCategory == 'All') return true;
                     return item.category == _selectedCategory;
@@ -176,51 +217,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 80), // Space for FAB
+                    padding: const EdgeInsets.only(bottom: 80),
                     itemCount: filteredList.length,
                     itemBuilder: (context, index) {
                       final item = filteredList[index];
 
-                      // --- DISMISSIBLE WRAPPER ---
                       return Dismissible(
-                        key: Key(item.id), // Unique Key is critical
-                        direction: DismissDirection.endToStart, // Swipe R to L
+                        key: Key(item.id),
+                        direction: DismissDirection.endToStart,
                         
-                        // Background (Red "Delete" reveal)
+                        // Background (Reveal)
                         background: Container(
                           alignment: Alignment.centerRight,
                           padding: const EdgeInsets.only(right: 20),
                           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.red.shade400,
+                            color: theme.colorScheme.errorContainer,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Icon(Icons.delete, color: Colors.white, size: 28),
+                          child: Icon(PhosphorIconsDuotone.trash, color: theme.colorScheme.error, size: 28),
                         ),
                         
-                        // Confirm Dialog
+                        // --- CONFIRM DISMISS LOGIC ---
                         confirmDismiss: (direction) async {
-                          return await _showDeleteConfirmation(context);
-                        },
-
-                        // Actual Delete Action
-                        onDismissed: (direction) {
-                          // Call the delete method in your provider
-                          ref.read(foodServiceProvider).deleteFoodItem(item.id);
+                          final action = await _showDeleteActionDialog(context, item.name);
                           
-                          // Optional snackbar
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${item.name} deleted'),
-                              action: SnackBarAction(
-                                label: 'Undo',
-                                onPressed: () {
-                                  // NOTE: To implement real undo, you'd need to re-add the item here
-                                  ref.read(foodServiceProvider).addFoodItem(item);
-                                },
-                              ),
-                            ),
-                          );
+                          if (action == DeleteAction.consumed) {
+                            // Positive Action: Just delete
+                            ref.read(foodServiceProvider).deleteFoodItem(item.id);
+                            return true;
+                          } 
+                          else if (action == DeleteAction.wasted) {
+                            // Negative Action: Log to waste, then delete
+                            ref.read(foodServiceProvider).logWastedItem(item);
+                            return true;
+                          } 
+                          else if (action == DeleteAction.mistake) {
+                            // Neutral Action: Just delete, no tracking
+                            ref.read(foodServiceProvider).deleteFoodItem(item.id);
+                            return true;
+                          }
+                          
+                          // Cancel
+                          return false;
                         },
 
                         child: FoodCard(item: item),
@@ -238,7 +277,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // --- HELPERS ---
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -263,7 +301,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
             color: isSelected ? Theme.of(context).cardColor : Colors.transparent,

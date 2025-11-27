@@ -25,7 +25,6 @@ final authServiceProvider = Provider<AuthService>((ref) {
 });
 
 // 4. Household Notifier (Manages the Household ID state)
-// We use NotifierProvider instead of StateProvider for better stability in Riverpod 2.0+
 class HouseholdNotifier extends Notifier<String?> {
   @override
   String? build() {

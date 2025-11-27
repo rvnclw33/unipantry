@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:unipantry/providers/auth_provider.dart';
 import 'package:unipantry/screens/settings_screen.dart';
+import 'package:unipantry/screens/waste_screen.dart';
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
@@ -34,22 +35,24 @@ class AppDrawer extends ConsumerWidget {
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2), width: 2),
+                      border: Border.all(
+                          color: theme.colorScheme.primary.withOpacity(0.2),
+                          width: 2),
                     ),
                     child: CircleAvatar(
                       radius: 32,
                       backgroundColor: theme.colorScheme.primaryContainer,
-                      backgroundImage: user?.photoURL != null 
-                          ? NetworkImage(user!.photoURL!) 
+                      backgroundImage: user?.photoURL != null
+                          ? NetworkImage(user!.photoURL!)
                           : null,
                       child: user?.photoURL == null
                           ? Text(
-                              (user?.displayName ?? user?.email ?? "G")[0].toUpperCase(),
+                              (user?.displayName ?? user?.email ?? "G")[0]
+                                  .toUpperCase(),
                               style: TextStyle(
-                                fontSize: 24, 
-                                fontWeight: FontWeight.bold, 
-                                color: theme.colorScheme.primary
-                              ),
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.primary),
                             )
                           : null,
                     ),
@@ -91,21 +94,24 @@ class AppDrawer extends ConsumerWidget {
                     onTap: () => Navigator.pop(context),
                     isActive: true,
                   ),
-                  
+
                   // --- REPLACED 'Categories' WITH 'Insights' ---
+                  // inside AppDrawer ...
                   _buildDrawerItem(
                     context: context,
-                    icon: PhosphorIconsDuotone.chartPieSlice, // Modern Analytics Icon
+                    icon: PhosphorIconsDuotone.chartPieSlice,
                     label: 'Waste Insights',
                     onTap: () {
-                      Navigator.pop(context);
-                      // Placeholder for now
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Analytics coming in next update!')),
+                      Navigator.pop(context); // Close drawer
+                      // Navigate to Waste Screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const WasteScreen()),
                       );
                     },
                   ),
-                  
+
                   _buildDrawerItem(
                     context: context,
                     icon: PhosphorIconsDuotone.gear,
@@ -114,7 +120,8 @@ class AppDrawer extends ConsumerWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const SettingsScreen()),
                       );
                     },
                   ),
@@ -164,14 +171,19 @@ class AppDrawer extends ConsumerWidget {
     Color? color,
   }) {
     final theme = Theme.of(context);
-    final itemColor = color ?? (isActive ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant);
+    final itemColor = color ??
+        (isActive
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: isActive ? theme.colorScheme.primaryContainer.withOpacity(0.3) : null,
+        tileColor: isActive
+            ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+            : null,
         leading: Icon(icon, color: itemColor, size: 24),
         title: Text(
           label,
