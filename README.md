@@ -16,21 +16,9 @@ Unipantry provides the following capabilities:
 - Real-time synchronization via Firebase Firestore  
 - User authentication and household membership management through Firebase Authentication  
 
-The project follows a modular software architecture that separates UI components, state management, business logic, and data access layers.
-
 ---
 
-## Architectural Notes
-
-- **State Management:** Implemented using Riverpod to ensure predictable state flow and separation of concerns.  
-- **Data Persistence:** Firebase Firestore is used for real-time data synchronization across all household members.  
-- **Authentication:** Firebase Authentication manages user identity and access control.  
-- **Notification Scheduling:** A custom notification service schedules and dispatches expiry reminders locally.  
-- **API Integration:** OpenFoodAPI is utilized for barcode-based item metadata retrieval.  
-- **UI Layer:** Structured as a multi-screen Flutter application with reusable components, maintaining clear separation between UI and business logic.
-
-The system architecture is organized into three major layers:
-
-1. **Presentation Layer** – Flutter screens and widgets  
-2. **Logic/State Layer** – Riverpod providers handling domain logic  
-3. **Data/Service Layer** – Firestore, Authentication, NotificationService, and external API integrations
+System is divided into three layers:
+1. Presentation Layer – Flutter screens and widgets  
+2. Logic/State Layer – Riverpod providers handling domain logic  
+3. Data/Service Layer – Firestore, Authentication, NotificationService, and external API integrations
