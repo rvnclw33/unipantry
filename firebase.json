@@ -1,1 +1,35 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"unipantry-b018d","appId":"1:842026507618:android:a03186e7b9d209856da03b","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"unipantry-b018d","appId":"1:842026507618:ios:5e1d0bd8508ec2646da03b","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"unipantry-b018d","configurations":{"android":"1:842026507618:android:a03186e7b9d209856da03b","ios":"1:842026507618:ios:5e1d0bd8508ec2646da03b"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "unipantry-b018d",
+          "appId": "1:842026507618:android:a03186e7b9d209856da03b",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "unipantry-b018d",
+          "appId": "1:842026507618:ios:e1a0c353812173c46da03b",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

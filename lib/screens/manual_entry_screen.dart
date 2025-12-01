@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -8,6 +7,7 @@ import 'package:unipantry/providers/food_provider.dart';
 import 'package:unipantry/services/notification_service.dart';
 
 class ManualEntryScreen extends ConsumerStatefulWidget {
+  // Data passed from the Scanner Screen
   final String? scannedItemName;
   final String? scannedBrand;
   final String? scannedBarcode;
@@ -28,19 +28,22 @@ class ManualEntryScreen extends ConsumerStatefulWidget {
 class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // --- Controllers ---
   late final TextEditingController _nameController;
   final _quantityController = TextEditingController(text: '1');
   final _brandController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
 
+  // --- State Variables ---
   DateTime? _selectedExpiryDate;
   String? _selectedCategory;
-  String _selectedUnit = 'pcs';
+  String _selectedUnit = 'pcs'; // Default unit
 
+  // --- Lists ---
   final List<String> _categories = [
-    'Fruit', 'Vegetable', 'Meat', 'Seafood','Dairy', 
-    'Bakery', 'Snacks', 'Drinks', 'Other'
+    'Fruit', 'Vegetable', 'Meat', 'Dairy', 
+    'Bakery', 'Pantry', 'Drinks', 'Other'
   ];
 
   final List<String> _units = [
@@ -50,8 +53,11 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
   @override
   void initState() {
     super.initState();
+    // 1. Pre-fill fields if they came from the scanner
     _nameController = TextEditingController(text: widget.scannedItemName ?? '');
     _brandController.text = widget.scannedBrand ?? '';
+    
+    // 2. Pre-fill description if available
     if (widget.scannedDescription != null) {
       _descriptionController.text = widget.scannedDescription!;
     }
@@ -67,7 +73,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
     super.dispose();
   }
 
-  // --- NEW: Logic to increment/decrement quantity ---
+  // --- Logic to increment/decrement quantity ---
   void _updateQuantity(int change) {
     int current = int.tryParse(_quantityController.text) ?? 1;
     int newValue = current + change;
@@ -80,13 +86,14 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
     });
   }
 
+  // --- Date Picker Logic ---
   Future<void> _presentDatePicker() async {
     final now = DateTime.now();
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: now,
       firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 10)),
+      lastDate: now.add(const Duration(days: 365 * 10)), // 10 years into future
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -105,23 +112,25 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
     }
   }
 
+  // --- Save Logic ---
   void _saveItem() {
     final isValid = _formKey.currentState!.validate();
+
     if (!isValid) return;
 
     if (_selectedExpiryDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select an expiry date.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
+        const SnackBar(
+          content: Text('Please select an expiry date.'),
+          backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
+    // 1. Create the new FoodItem object
     final newItem = FoodItem(
-      id: '',
+      id: '', // Firestore will generate this
       name: _nameController.text,
       category: _selectedCategory!,
       quantity: int.parse(_quantityController.text),
@@ -129,58 +138,61 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
       expiryDate: _selectedExpiryDate!,
       addedAt: DateTime.now(),
       brand: _brandController.text.isNotEmpty ? _brandController.text : null,
-      storageLocation: _locationController.text.isNotEmpty ? _locationController.text : null,
+      storageLocation: _locationController.text.isNotEmpty
+          ? _locationController.text
+          : null,
       barcode: widget.scannedBarcode,
-      description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+      description: _descriptionController.text.isNotEmpty 
+          ? _descriptionController.text 
+          : null,
     );
 
+    // 2. Save to Firestore via Provider
     ref.read(foodServiceProvider).addFoodItem(newItem);
 
-    // Notification Logic
+    // --- 3. SCHEDULE NOTIFICATIONS ---
+    
+    // Generate a unique numeric ID based on current timestamp
     final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-    // 1. Test Notification (10 seconds)
-    final testDate = DateTime.now().add(const Duration(seconds: 10));
-    NotificationService().scheduleNotification(
-      id: notificationId + 999,
-      title: 'Test: ${newItem.name}',
-      body: 'This is how your reminder will look!',
-      scheduledDate: testDate,
-    );
-
-    // 2. Real Notifications
+    
+    // A. Schedule "Expiring Soon" (3 days before at 9:00 AM)
     final reminderDate = _selectedExpiryDate!.subtract(const Duration(days: 3));
     final reminderAt9AM = DateTime(
       reminderDate.year, reminderDate.month, reminderDate.day, 9, 0, 0
     );
 
+    // Only schedule if this date is in the FUTURE
     if (reminderAt9AM.isAfter(DateTime.now())) {
       NotificationService().scheduleNotification(
-        id: notificationId,
+        id: notificationId, 
         title: 'Expiring Soon!',
-        body: '${newItem.name} expires in 3 days.',
+        body: '${newItem.name} expires in 3 days. Use it soon!',
         scheduledDate: reminderAt9AM,
       );
     }
 
+    // B. Schedule "Expired" (On the actual day at 9:00 AM)
     final expiryAt9AM = DateTime(
       _selectedExpiryDate!.year, _selectedExpiryDate!.month, _selectedExpiryDate!.day, 9, 0, 0
     );
 
+    // Only schedule if this date is in the FUTURE
     if (expiryAt9AM.isAfter(DateTime.now())) {
       NotificationService().scheduleNotification(
-        id: notificationId + 1,
+        id: notificationId + 1, // Ensure distinct ID
         title: 'Item Expired',
         body: '${newItem.name} has expired today.',
         scheduledDate: expiryAt9AM,
       );
     }
 
+    // 4. Show immediate visual confirmation (In-App)
     NotificationService().showNotification(
       title: 'Item Added',
       body: 'Reminder set for ${DateFormat.Md().format(_selectedExpiryDate!)}',
     );
 
+    // 5. Navigate back to Home
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
@@ -204,7 +216,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
+      onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard
       child: Scaffold(
         backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
@@ -216,18 +228,32 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _saveItem,
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
-          elevation: 4,
-          icon: const Icon(PhosphorIconsDuotone.floppyDisk),
-          label: const Text("Save Item", style: TextStyle(fontWeight: FontWeight.bold)),
+        
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: SizedBox(
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: _saveItem,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  elevation: 2,
+                ),
+                icon: const Icon(PhosphorIconsDuotone.floppyDisk),
+                label: const Text("Save to Pantry"),
+              ),
+            ),
+          ),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         
         body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+          padding: const EdgeInsets.all(20),
           child: Form(
             key: _formKey,
             child: Column(
@@ -236,14 +262,14 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                 // 1. Hero Section
                 TextFormField(
                   controller: _nameController,
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w400),
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   decoration: _modernInput('What is it?', PhosphorIconsDuotone.package, context).copyWith(
                     hintText: 'e.g. Apple',
                   ),
                   validator: (value) => (value == null || value.isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
-      
+
                 DropdownButtonFormField<String>(
                   value: _selectedCategory,
                   hint: const Text('Select Category'),
@@ -253,8 +279,8 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                   validator: (value) => value == null ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
-      
-                // --- 2. UPDATED QUANTITY ROW WITH +/- BUTTONS ---
+
+                // --- 2. QUANTITY ROW ---
                 Row(
                   children: [
                     // Quantity Stepper
@@ -267,13 +293,11 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                         ),
                         child: Row(
                           children: [
-                            // Minus Button
                             IconButton(
                               onPressed: () => _updateQuantity(-1),
                               icon: Icon(PhosphorIconsDuotone.minus, size: 20),
                               color: theme.colorScheme.primary,
                             ),
-                            // Text Field
                             Expanded(
                               child: TextFormField(
                                 controller: _quantityController,
@@ -288,7 +312,6 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                                 validator: (val) => (val == null || val.isEmpty) ? 'Req' : null,
                               ),
                             ),
-                            // Plus Button
                             IconButton(
                               onPressed: () => _updateQuantity(1),
                               icon: Icon(PhosphorIconsDuotone.plus, size: 20),
@@ -313,7 +336,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-      
+
                 // 3. Hero Date Picker
                 Text("Expiry Date", style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey)),
                 const SizedBox(height: 8),
@@ -361,11 +384,11 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                     ),
                   ),
                 ),
-      
+                
                 const SizedBox(height: 32),
                 const Divider(),
                 const SizedBox(height: 16),
-      
+
                 // 4. Optional Details
                 Text(
                   'More Details',
@@ -374,7 +397,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-      
+
                 TextFormField(
                   controller: _descriptionController,
                   maxLines: 3,
@@ -383,7 +406,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-      
+
                 Row(
                   children: [
                     Expanded(
@@ -396,7 +419,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _locationController,
-                        decoration: _modernInput('Location', PhosphorIconsDuotone.package, context),
+                        decoration: _modernInput('Location', PhosphorIconsDuotone.mapPin, context),
                       ),
                     ),
                   ],

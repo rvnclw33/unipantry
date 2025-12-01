@@ -8,10 +8,19 @@ import 'package:unipantry/screens/waste_screen.dart';
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
+  String _getInitials(String? name, String? email) {
+    if (name != null && name.isNotEmpty) return name[0].toUpperCase();
+    if (email != null && email.isNotEmpty) return email[0].toUpperCase();
+    return "U"; 
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(firebaseAuthProvider).currentUser;
+    
+    // Get safe initial
+    final initial = _getInitials(user?.displayName, user?.email);
 
     return Drawer(
       backgroundColor: theme.colorScheme.surface,
@@ -25,7 +34,7 @@ class AppDrawer extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- 1. HEADER ---
+            // --- HEADER ---
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 40, 28, 20),
               child: Column(
@@ -35,24 +44,23 @@ class AppDrawer extends ConsumerWidget {
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(
-                          color: theme.colorScheme.primary.withOpacity(0.2),
-                          width: 2),
+                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2), width: 2),
                     ),
                     child: CircleAvatar(
                       radius: 32,
                       backgroundColor: theme.colorScheme.primaryContainer,
-                      backgroundImage: user?.photoURL != null
-                          ? NetworkImage(user!.photoURL!)
+                      backgroundImage: user?.photoURL != null 
+                          ? NetworkImage(user!.photoURL!) 
                           : null,
+                      // Use the safe initial here
                       child: user?.photoURL == null
                           ? Text(
-                              (user?.displayName ?? user?.email ?? "G")[0]
-                                  .toUpperCase(),
+                              initial,
                               style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.primary),
+                                fontSize: 24, 
+                                fontWeight: FontWeight.bold, 
+                                color: theme.colorScheme.primary
+                              ),
                             )
                           : null,
                     ),
@@ -64,7 +72,9 @@ class AppDrawer extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    user?.displayName ?? "Guest User",
+                    (user?.displayName != null && user!.displayName!.isNotEmpty) 
+                        ? user.displayName! 
+                        : "User",
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       height: 1.2,
@@ -82,7 +92,7 @@ class AppDrawer extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
-            // --- 2. NAVIGATION ITEMS ---
+            // --- NAVIGATION ITEMS ---
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -94,24 +104,18 @@ class AppDrawer extends ConsumerWidget {
                     onTap: () => Navigator.pop(context),
                     isActive: true,
                   ),
-
-                  // --- REPLACED 'Categories' WITH 'Insights' ---
-                  // inside AppDrawer ...
                   _buildDrawerItem(
                     context: context,
                     icon: PhosphorIconsDuotone.chartPieSlice,
                     label: 'Waste Insights',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
-                      // Navigate to Waste Screen
+                      Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (context) => const WasteScreen()),
+                        MaterialPageRoute(builder: (context) => const WasteScreen()),
                       );
                     },
                   ),
-
                   _buildDrawerItem(
                     context: context,
                     icon: PhosphorIconsDuotone.gear,
@@ -120,8 +124,7 @@ class AppDrawer extends ConsumerWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (context) => const SettingsScreen()),
+                        MaterialPageRoute(builder: (context) => const SettingsScreen()),
                       );
                     },
                   ),
@@ -129,7 +132,7 @@ class AppDrawer extends ConsumerWidget {
               ),
             ),
 
-            // --- 3. FOOTER ---
+            // --- FOOTER ---
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
               child: Column(
@@ -171,19 +174,14 @@ class AppDrawer extends ConsumerWidget {
     Color? color,
   }) {
     final theme = Theme.of(context);
-    final itemColor = color ??
-        (isActive
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurfaceVariant);
+    final itemColor = color ?? (isActive ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: isActive
-            ? theme.colorScheme.primaryContainer.withOpacity(0.3)
-            : null,
+        tileColor: isActive ? theme.colorScheme.primaryContainer.withOpacity(0.3) : null,
         leading: Icon(icon, color: itemColor, size: 24),
         title: Text(
           label,

@@ -5,8 +5,7 @@ import 'package:unipantry/providers/food_provider.dart';
 import 'package:unipantry/widgets/app_drawer.dart';
 import 'package:unipantry/widgets/food_card.dart';
 
-// --- ENUMS ---
-// Make sure this DeleteAction enum includes 'mistake'
+// Enum for Deletion
 enum DeleteAction { cancel, consumed, wasted, mistake }
 
 const List<String> _categories = [
@@ -25,7 +24,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   FoodFilter _currentFoodFilter = FoodFilter.all;
   String _selectedCategory = 'All';
 
-  // --- NEW: Smart Delete Dialog ---
+  // --- DELETE DIALOG ---
   Future<DeleteAction?> _showDeleteActionDialog(BuildContext context, String itemName) {
     return showDialog<DeleteAction>(
       context: context,
@@ -35,36 +34,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actionsAlignment: MainAxisAlignment.center,
         actionsOverflowButtonSpacing: 8,
         actions: [
-          // 1. The Tracking Options
+          // Row 1: Tracking
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildDialogOption(
-                ctx, 
-                label: 'Consumed', 
-                icon: PhosphorIconsDuotone.check, 
-                color: Colors.green, 
-                action: DeleteAction.consumed
-              ),
-              _buildDialogOption(
-                ctx, 
-                label: 'Wasted', 
-                icon: PhosphorIconsDuotone.trash, 
-                color: Colors.red, 
-                action: DeleteAction.wasted
-              ),
+              _buildDialogOption(ctx, 'Consumed', PhosphorIconsDuotone.check, Colors.green, DeleteAction.consumed),
+              _buildDialogOption(ctx, 'Wasted', PhosphorIconsDuotone.trash, Colors.red, DeleteAction.wasted),
             ],
           ),
           const SizedBox(height: 16),
           const Divider(),
-          
-          // 2. The "Oops" Option (Mistake)
+          // Row 2: Utils
           TextButton(
             onPressed: () => Navigator.pop(ctx, DeleteAction.mistake),
-            child: const Text("Just remove (Mistake entry)", style: TextStyle(color: Colors.grey)),
+            child: const Text("Remove (Mistake Entry)", style: TextStyle(color: Colors.grey)),
           ),
-          
-          // 3. Cancel
           TextButton(
             onPressed: () => Navigator.pop(ctx, DeleteAction.cancel),
             child: const Text("Cancel"),
@@ -74,8 +58,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // Helper for big dialog buttons
-  Widget _buildDialogOption(BuildContext context, {required String label, required IconData icon, required Color color, required DeleteAction action}) {
+  Widget _buildDialogOption(BuildContext context, String label, IconData icon, Color color, DeleteAction action) {
     return InkWell(
       onTap: () => Navigator.pop(context, action),
       borderRadius: BorderRadius.circular(12),
@@ -203,7 +186,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             
             const SizedBox(height: 16),
 
-            // --- LIST WITH DISMISSIBLE ---
+            // List
             Expanded(
               child: foodItemsAsync.when(
                 data: (items) {
@@ -225,8 +208,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       return Dismissible(
                         key: Key(item.id),
                         direction: DismissDirection.endToStart,
-                        
-                        // Background (Reveal)
                         background: Container(
                           alignment: Alignment.centerRight,
                           padding: const EdgeInsets.only(right: 20),
@@ -238,28 +219,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Icon(PhosphorIconsDuotone.trash, color: theme.colorScheme.error, size: 28),
                         ),
                         
-                        // --- CONFIRM DISMISS LOGIC ---
                         confirmDismiss: (direction) async {
                           final action = await _showDeleteActionDialog(context, item.name);
                           
                           if (action == DeleteAction.consumed) {
-                            // Positive Action: Just delete
                             ref.read(foodServiceProvider).deleteFoodItem(item.id);
                             return true;
-                          } 
-                          else if (action == DeleteAction.wasted) {
-                            // Negative Action: Log to waste, then delete
+                          } else if (action == DeleteAction.wasted) {
                             ref.read(foodServiceProvider).logWastedItem(item);
                             return true;
-                          } 
-                          else if (action == DeleteAction.mistake) {
-                            // Neutral Action: Just delete, no tracking
+                          } else if (action == DeleteAction.mistake) {
+                            // Just delete, no log
                             ref.read(foodServiceProvider).deleteFoodItem(item.id);
                             return true;
                           }
-                          
-                          // Cancel
-                          return false;
+                          return false; // Cancel
                         },
 
                         child: FoodCard(item: item),

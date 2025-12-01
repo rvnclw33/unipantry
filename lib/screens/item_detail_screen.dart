@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:unipantry/models/food_item.dart';
 import 'package:unipantry/providers/food_provider.dart';
 
@@ -16,10 +17,12 @@ class ItemDetailScreen extends ConsumerStatefulWidget {
 class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
   late TextEditingController _descriptionController;
   late TextEditingController _quantityController;
-  late String _selectedUnit;
   
-  // List of available units
-  final List<String> _units = ['pcs', 'kg', 'g', 'L', 'ml', 'pack', 'can'];
+  // --- State for Editable Fields ---
+  late String _selectedUnit;
+  late DateTime _expiryDate;
+
+  final List<String> _units = ['pcs', 'kg', 'g', 'L', 'ml', 'pack', 'can', 'bottle'];
 
   @override
   void initState() {
@@ -27,6 +30,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
     _descriptionController = TextEditingController(text: widget.item.description);
     _quantityController = TextEditingController(text: widget.item.quantity.toString());
     _selectedUnit = widget.item.unit;
+    _expiryDate = widget.item.expiryDate; // Initialize with current expiry
   }
 
   @override
@@ -36,6 +40,34 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
     super.dispose();
   }
 
+  // --- NEW: Date Picker Logic ---
+  Future<void> _pickNewExpiryDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _expiryDate,
+      firstDate: now.subtract(const Duration(days: 365)), // Allow correcting past dates
+      lastDate: now.add(const Duration(days: 365 * 10)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _expiryDate = picked;
+      });
+    }
+  }
+
+  // --- Save Logic ---
   void _saveChanges() async {
     final newQty = int.tryParse(_quantityController.text) ?? widget.item.quantity;
     
@@ -44,6 +76,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
       description: _descriptionController.text,
       quantity: newQty,
       unit: _selectedUnit,
+      expiryDate: _expiryDate, // Save the new date
     );
 
     // Update in Firestore
@@ -59,13 +92,27 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    // Calculate color for the date display
+    final daysLeft = _expiryDate.difference(DateTime.now()).inDays;
+    Color dateColor = Colors.black;
+    if (daysLeft < 0) dateColor = Colors.red;
+    else if (daysLeft <= 3) dateColor = Colors.orange;
+    else dateColor = Colors.green;
+
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Item Details'),
+        title: const Text('Edit Item'),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: _saveChanges,
-            icon: const Icon(Icons.check),
+            tooltip: 'Save Changes',
+            icon: Icon(PhosphorIconsDuotone.check, color: theme.colorScheme.primary, size: 28),
           ),
         ],
       ),
@@ -74,70 +121,89 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section
+            // --- Header Section ---
             Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  child: Icon(Icons.fastfood, size: 30, color: Theme.of(context).colorScheme.primary),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(PhosphorIconsDuotone.package, size: 32, color: theme.colorScheme.primary),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.item.name, style: Theme.of(context).textTheme.headlineSmall),
-                      Text('Added: ${DateFormat.yMMMd().format(widget.item.addedAt)}',
-                          style: TextStyle(color: Colors.grey[600])),
+                      Text(
+                        widget.item.name, 
+                        style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)
+                      ),
+                      Text(
+                        widget.item.category,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-            const Divider(height: 40),
+            const SizedBox(height: 32),
 
-            // Barcode Info Section
-            if (widget.item.barcode != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
+            // --- 1. Expiry Date Editor ---
+            Text("Expiry Date", style: theme.textTheme.labelLarge?.copyWith(color: Colors.grey)),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: _pickNewExpiryDate,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade100),
+                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: dateColor.withOpacity(0.5)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.qr_code, color: Colors.blue),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Scanned Product', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-                          Text('Barcode: ${widget.item.barcode}'),
-                        ],
-                      ),
+                    Icon(PhosphorIconsDuotone.calendar, color: dateColor),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DateFormat.yMMMMd().format(_expiryDate),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          daysLeft < 0 ? "Expired" : "Expires in $daysLeft days",
+                          style: TextStyle(color: dateColor, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
+                    const Spacer(),
+                    Icon(PhosphorIconsDuotone.pencilSimple, color: Colors.grey[400], size: 20),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-            ],
+            ),
+            const SizedBox(height: 24),
 
-            // Edit Quantity & Unit
-            const Text('Quantity & Unit', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            // --- 2. Quantity & Unit ---
             Row(
               children: [
                 Expanded(
                   flex: 2,
-                  child: TextField(
+                  child: TextFormField(
                     controller: _quantityController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
                       labelText: 'Qty',
+                      prefixIcon: Icon(PhosphorIconsDuotone.hash),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      filled: true,
+                      fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                     ),
                   ),
                 ),
@@ -146,9 +212,12 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                   flex: 3,
                   child: DropdownButtonFormField<String>(
                     value: _selectedUnit,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
                       labelText: 'Unit',
+                      prefixIcon: Icon(PhosphorIconsDuotone.ruler),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      filled: true,
+                      fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                     ),
                     items: _units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
                     onChanged: (val) => setState(() => _selectedUnit = val!),
@@ -157,32 +226,49 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // Description / Notes Field
-            const Text('Description / Notes', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(
+            // --- 3. Description / Notes ---
+            TextFormField(
               controller: _descriptionController,
               maxLines: 4,
               decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: widget.item.barcode != null 
-                    ? 'Add details about this scanned product...' 
-                    : 'Add notes, recipe ideas, or storage tips...',
+                labelText: 'Notes',
+                alignLabelWithHint: true,
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(bottom: 60),
+                  child: Icon(PhosphorIconsDuotone.note),
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                filled: true,
+                fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
               ),
             ),
+
+            const SizedBox(height: 32),
             
-            const SizedBox(height: 20),
-            Center(
-              child: TextButton.icon(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                label: const Text('Delete Item', style: TextStyle(color: Colors.red)),
-                onPressed: () {
-                   // Implement delete logic here if needed, or stick to swipe-to-delete
-                },
+            // --- Barcode Info (Read Only) ---
+            if (widget.item.barcode != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade100),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.qr_code, color: Colors.blue),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Scanned Barcode: ${widget.item.barcode}',
+                        style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            )
           ],
         ),
       ),

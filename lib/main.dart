@@ -1,4 +1,4 @@
-// lib/main.dart
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unipantry/app.dart';
@@ -9,16 +9,21 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
+  // Initialize Firebase (Works on Web if firebase_options.dart is correct)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize the notification service
-  await NotificationService().init();
+  // Initialize Notifications (Skip on Web)
+  if (!kIsWeb) {
+    try {
+      await NotificationService().init();
+    } catch (e) {
+      print("Notification Init Failed: $e");
+    }
+  }
 
   runApp(
-    // ProviderScope is what "activates" Riverpod
     const ProviderScope(
       child: App(),
     ),
